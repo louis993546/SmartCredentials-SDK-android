@@ -6,6 +6,13 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     >
+
+    <Button
+        android:id="@+id/button_trigger_sim_inject"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Trigger fake SIM eject"/>
+
     <TextView
         android:id="@+id/header_title"
         android:background="@color/ping"

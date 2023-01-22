@@ -1,6 +1,8 @@
 package com.operatortokenocb
 
 import android.content.Context
+import android.util.Log
+import android.widget.Toast
 import androidx.work.RxWorker
 import androidx.work.WorkerParameters
 import com.operatortokenocb.contentprovider.ContentProvider
@@ -13,10 +15,13 @@ import com.operatortokenocb.network.BaseRetrofitClient
 import com.operatortokenocb.network.GetBearerBody
 import com.operatortokenocb.network.PartnerManagementApi
 import com.operatortokenocb.network.RetrofitClient
+import io.reactivex.Observable
 import io.reactivex.Single
+import okhttp3.internal.wait
 import retrofit2.Retrofit
 import retrofit2.create
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
 class TokenCheckingWork(
     appContext: Context,
@@ -26,36 +31,52 @@ class TokenCheckingWork(
         Timber.tag("TCW").d("work running")
 
         val api = getTokenApi()
-        return api.observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
+        return api
+            .observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
+//            .delay(10, TimeUnit.SECONDS)
             .flatMap { accessToken ->
+
+                Timber.tag("TCW").d("10")
                 val body = GetBearerBody(accessToken, null, applicationContext.packageName)
                 api.observeBearerToken(body)
             }
+            .retry(10)
             .flatMap { bearerToken ->
+
+                Timber.tag("TCW").d("20")
                 ContentProvider(applicationContext)
                     .getTransactionToken(bearerToken, "tphonehack", "psi")
             }
+            .retry(10)
             .map { token ->
+
+                Timber.tag("TCW").d("30")
                 val data = TransactionTokenDecrypt(applicationContext).getClaimsFromTransactionToken(token)
                 Timber.tag("TCW").d(data)
-
+                data
+            }
+            .flatMap {
                 val sharePref = applicationContext.getSharedPreferences("fuck", Context.MODE_PRIVATE)
                 val tokenRepo = TokenRepository(sharePref)
                 val contactRepo = ContactRepository(sharePref)
                 val email = contactRepo.getInfo()?.email
+                Timber.tag("TCW").d(email)
 
                 val oldToken = tokenRepo.getToken()
                 if (oldToken.isNullOrBlank()) {
-                    tokenRepo.storeToken(data)
-                } else if (oldToken == data) {
-                    Timber.tag("TCW").d("same device")
+                    Timber.tag("TCW").d("storing token")
+                    tokenRepo.storeToken(it)
+                    Observable.just(it)
+                } else if (oldToken == it) {
+                    Timber.tag("TCW").d("same sim")
+                    Observable.just(it)
+                } else if (email?.isNotBlank() == true) {
+                    Timber.tag("TCW").d("different sim")
+                    AlertRepository(getAlertApi()).sendAlert(email).toObservable()
                 } else {
-//                    AlertRepository(getAlertApi())
-//                        .sendAlert()
-                    Timber.tag("TCW").d("TODO")
+                    Timber.tag("TCW").d("wtf")
+                    Observable.error(Throwable("wtf"))
                 }
-
-                data
             }
             .singleOrError()
             .map {
@@ -75,7 +96,7 @@ class TokenCheckingWork(
 
     private fun getAlertApi(): AlertApi {
         val retrofitClient: Retrofit =
-            RetrofitClient().createRetrofitClient(TODO("our fake server url"))
+            RetrofitClient().createRetrofitClient("https://tdphonekeeper.000webhostapp.com/")
 
         return retrofitClient.create()
     }
