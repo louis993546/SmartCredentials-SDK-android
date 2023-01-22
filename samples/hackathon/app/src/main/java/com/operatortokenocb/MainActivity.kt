@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         Status.Different -> {
-                            binding.progressBar.isVisible = true
+                            binding.progressBar.isVisible = false
                             binding.keyLogo.run {
                                 isVisible = true
                                 setImageResource(R.drawable.red_key)
