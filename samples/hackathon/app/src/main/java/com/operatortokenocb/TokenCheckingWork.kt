@@ -7,10 +7,7 @@ import androidx.work.RxWorker
 import androidx.work.WorkerParameters
 import com.operatortokenocb.contentprovider.ContentProvider
 import com.operatortokenocb.contentprovider.TransactionTokenDecrypt
-import com.operatortokenocb.data.AlertApi
-import com.operatortokenocb.data.AlertRepository
-import com.operatortokenocb.data.ContactRepository
-import com.operatortokenocb.data.TokenRepository
+import com.operatortokenocb.data.*
 import com.operatortokenocb.network.BaseRetrofitClient
 import com.operatortokenocb.network.GetBearerBody
 import com.operatortokenocb.network.PartnerManagementApi
@@ -27,14 +24,22 @@ class TokenCheckingWork(
     appContext: Context,
     workerParams: WorkerParameters,
 ) : RxWorker(appContext, workerParams) {
+
+    companion object {
+        const val WORK_NAME = "dakwjfhklwjhf"
+    }
+
+    private val sharePref = applicationContext.getSharedPreferences("fuck", Context.MODE_PRIVATE)
     override fun createWork(): Single<Result> {
         Timber.tag("TCW").d("work running")
+        val hackRepo = HackRepository(sharePref)
 
         val api = getTokenApi()
         return api
             .observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
 //            .delay(10, TimeUnit.SECONDS)
             .flatMap { accessToken ->
+                hackRepo.notifyResultHack(Status.Loading)
 
                 Timber.tag("TCW").d("10")
                 val body = GetBearerBody(accessToken, null, applicationContext.packageName)
@@ -56,7 +61,7 @@ class TokenCheckingWork(
                 data
             }
             .flatMap {
-                val sharePref = applicationContext.getSharedPreferences("fuck", Context.MODE_PRIVATE)
+
                 val tokenRepo = TokenRepository(sharePref)
                 val contactRepo = ContactRepository(sharePref)
                 val email = contactRepo.getInfo()?.email
@@ -66,12 +71,15 @@ class TokenCheckingWork(
                 if (oldToken.isNullOrBlank()) {
                     Timber.tag("TCW").d("storing token")
                     tokenRepo.storeToken(it)
+                    hackRepo.notifyResultHack(Status.Same)
                     Observable.just(it)
                 } else if (oldToken == it) {
                     Timber.tag("TCW").d("same sim")
+                    hackRepo.notifyResultHack(Status.Same)
                     Observable.just(it)
                 } else if (email?.isNotBlank() == true) {
                     Timber.tag("TCW").d("different sim")
+                    hackRepo.notifyResultHack(Status.Different)
                     AlertRepository(getAlertApi()).sendAlert(email).toObservable()
                 } else {
                     Timber.tag("TCW").d("wtf")

@@ -3,10 +3,8 @@ package com.operatortokenocb
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.work.Constraints
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
+import androidx.work.*
+import com.operatortokenocb.TokenCheckingWork.Companion.WORK_NAME
 import timber.log.Timber
 
 class SimChangedReceiver : BroadcastReceiver() {
@@ -26,7 +24,8 @@ class SimChangedReceiver : BroadcastReceiver() {
             )
             .build()
 
-        WorkManager.getInstance(context).enqueue(workRequest)
+        WorkManager.getInstance(context)
+            .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, workRequest)
 
         Timber.tag("SCR").d("work scheduled")
     }
