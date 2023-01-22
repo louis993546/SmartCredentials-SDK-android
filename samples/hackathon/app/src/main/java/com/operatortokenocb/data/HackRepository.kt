@@ -8,6 +8,16 @@ class HackRepository(
 ) {
     companion object {
         const val KEY = "adslfjlasdkjfklas"
+        const val KEYYYYYY = "adslfjlasasdfasfasdfdkjfklas"
+    }
+
+
+    fun isAlertEnabled(): Boolean = sharedPreferences.getBoolean(KEYYYYYY, false)
+
+    fun setAlertEnable(enable: Boolean) {
+        sharedPreferences.edit {
+            putBoolean(KEYYYYYY, enable)
+        }
     }
 
     fun notifyResultHack(status: Status) {

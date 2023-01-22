@@ -7,21 +7,37 @@
     android:orientation="vertical"
     >
 
-
     <TextView
         android:id="@+id/header_title"
         android:background="@color/ping"
         android:text="T-Developer - HACKATHON"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginTop="25dp"
+        android:layout_height="60dp"
         android:layout_marginBottom="20dp"
         android:textColor="@color/white"
         android:textSize="25dp"
         android:textStyle="bold"
-        android:gravity="center"
+        android:gravity="center" />
 
-        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable"/>
+
+        <Switch
+            android:id="@+id/switch_enable"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
+
     <EditText
         android:id="@+id/editTextTextPersonFirst"
         android:layout_width="match_parent"

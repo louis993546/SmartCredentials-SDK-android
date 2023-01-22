@@ -25,25 +25,6 @@ class MainActivity : AppCompatActivity() {
             binding.editTextTextPersonSecond.setText(it.lastName)
         }
 
-//
-//        binding.buttonTriggerSimInject.setOnClickListener {
-//            Timber.tag("MA").d("button clicked")
-//
-//            val workRequest = OneTimeWorkRequestBuilder<TokenCheckingWork>()
-//                .setConstraints(
-//                    Constraints.Builder()
-//                        .setRequiredNetworkType(NetworkType.METERED)
-//                        .build()
-//                )
-//                .build()
-//
-//            val operation = WorkManager.getInstance(this)
-//                .enqueueUniqueWork(TokenCheckingWork.WORK_NAME, ExistingWorkPolicy.REPLACE, workRequest)
-//            operation.state.observe(this) {
-//                Timber.tag("MA").d(it.toString())
-//            }
-//        }
-
         binding.button2.setOnClickListener {
             val email = binding.editTextTextEmailAddress2.text.toString()
             val first = binding.editTextTextPersonFirst.text.toString()
@@ -104,6 +85,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+
+        val hackRepo = HackRepository(sp)
+        binding.switchEnable.isChecked = hackRepo.isAlertEnabled()
+        binding.switchEnable.setOnCheckedChangeListener { _, isChecked ->
+            hackRepo.setAlertEnable(isChecked)
         }
     }
 }

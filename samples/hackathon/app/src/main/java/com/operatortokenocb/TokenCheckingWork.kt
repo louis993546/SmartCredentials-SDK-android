@@ -34,66 +34,69 @@ class TokenCheckingWork(
         Timber.tag("TCW").d("work running")
         val hackRepo = HackRepository(sharePref)
 
-        val api = getTokenApi()
-        return api
-            .observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
-//            .delay(10, TimeUnit.SECONDS)
-            .flatMap { accessToken ->
-                hackRepo.notifyResultHack(Status.Loading)
+        if (hackRepo.isAlertEnabled()) {
+            val api = getTokenApi()
+            return api
+                .observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
+            .delay(10, TimeUnit.SECONDS)
+                .flatMap { accessToken ->
+                    hackRepo.notifyResultHack(Status.Loading)
 
-                Timber.tag("TCW").d("10")
-                val body = GetBearerBody(accessToken, null, applicationContext.packageName)
-                api.observeBearerToken(body)
-            }
-            .retry(10)
-            .flatMap { bearerToken ->
-
-                Timber.tag("TCW").d("20")
-                ContentProvider(applicationContext)
-                    .getTransactionToken(bearerToken, "tphonehack", "psi")
-            }
-            .retry(10)
-            .map { token ->
-
-                Timber.tag("TCW").d("30")
-                val data = TransactionTokenDecrypt(applicationContext).getClaimsFromTransactionToken(token)
-                Timber.tag("TCW").d(data)
-                data
-            }
-            .flatMap {
-
-                val tokenRepo = TokenRepository(sharePref)
-                val contactRepo = ContactRepository(sharePref)
-                val email = contactRepo.getInfo()?.email
-                Timber.tag("TCW").d(email)
-
-                val oldToken = tokenRepo.getToken()
-                if (oldToken.isNullOrBlank()) {
-                    Timber.tag("TCW").d("storing token")
-                    tokenRepo.storeToken(it)
-                    hackRepo.notifyResultHack(Status.Same)
-                    Observable.just(it)
-                } else if (oldToken == it) {
-                    Timber.tag("TCW").d("same sim")
-                    hackRepo.notifyResultHack(Status.Same)
-                    Observable.just(it)
-                } else if (email?.isNotBlank() == true) {
-                    Timber.tag("TCW").d("different sim")
-                    hackRepo.notifyResultHack(Status.Different)
-                    AlertRepository(getAlertApi()).sendAlert(email).toObservable()
-                } else {
-                    Timber.tag("TCW").d("wtf")
-                    Observable.error(Throwable("wtf"))
+                    Timber.tag("TCW").d("10")
+                    val body = GetBearerBody(accessToken, null, applicationContext.packageName)
+                    api.observeBearerToken(body)
                 }
-            }
-            .singleOrError()
-            .map {
-                when {
-                    it.isBlank() -> Result.failure()
-                    else -> Result.success()
-                }
-            }
+                .retry(10)
+                .flatMap { bearerToken ->
 
+                    Timber.tag("TCW").d("20")
+                    ContentProvider(applicationContext)
+                        .getTransactionToken(bearerToken, "tphonehack", "psi")
+                }
+                .retry(10)
+                .map { token ->
+
+                    Timber.tag("TCW").d("30")
+                    val data = TransactionTokenDecrypt(applicationContext).getClaimsFromTransactionToken(token)
+                    Timber.tag("TCW").d(data)
+                    data
+                }
+                .flatMap {
+
+                    val tokenRepo = TokenRepository(sharePref)
+                    val contactRepo = ContactRepository(sharePref)
+                    val email = contactRepo.getInfo()?.email
+                    Timber.tag("TCW").d(email)
+
+                    val oldToken = tokenRepo.getToken()
+                    if (oldToken.isNullOrBlank()) {
+                        Timber.tag("TCW").d("storing token")
+                        tokenRepo.storeToken(it)
+                        hackRepo.notifyResultHack(Status.Same)
+                        Observable.just(it)
+                    } else if (oldToken == it) {
+                        Timber.tag("TCW").d("same sim")
+                        hackRepo.notifyResultHack(Status.Same)
+                        Observable.just(it)
+                    } else if (email?.isNotBlank() == true) {
+                        Timber.tag("TCW").d("different sim")
+                        hackRepo.notifyResultHack(Status.Different)
+                        AlertRepository(getAlertApi()).sendAlert(email).toObservable()
+                    } else {
+                        Timber.tag("TCW").d("wtf")
+                        Observable.error(Throwable("wtf"))
+                    }
+                }
+                .singleOrError()
+                .map {
+                    when {
+                        it.isBlank() -> Result.failure()
+                        else -> Result.success()
+                    }
+                }
+        } else {
+            return Single.just(Result.success())
+        }
     }
 
     private fun getTokenApi(): PartnerManagementApi {
