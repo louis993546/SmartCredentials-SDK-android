@@ -19,6 +19,12 @@ class MainActivity : AppCompatActivity() {
         val binding = FormRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        ContactRepository(getSharedPreferences("fuck", Context.MODE_PRIVATE)).getInfo()?.let {
+            binding.editTextTextEmailAddress2.setText(it.email)
+            binding.editTextTextPersonFirst.setText(it.firstName)
+            binding.editTextTextPersonSecond.setText(it.lastName)
+        }
+
 
         binding.buttonTriggerSimInject.setOnClickListener {
             Timber.tag("MA").d("button clicked")
@@ -46,14 +52,27 @@ class MainActivity : AppCompatActivity() {
                 ContactRepository(getSharedPreferences("fuck", Context.MODE_PRIVATE))
                     .storeInfo(
                         Info(
-                            firstName = "TODO",
-                            lastName = "TODO",
+                            firstName = first,
+                            lastName = last,
                             email = email,
                         )
                     )
             }
-
-
         }
+
+
+        // TODO check the current safe/not safe
+        val workRequest = OneTimeWorkRequestBuilder<TokenCheckingWork>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.METERED)
+                    .build()
+            )
+            .build()
+
+//        val operation = WorkManager.getInstance(this).enqueue(workRequest)
+//        operation.state.observe(this) {
+//            Timber.tag("MA").d(it.toString())
+//        }
     }
 }
