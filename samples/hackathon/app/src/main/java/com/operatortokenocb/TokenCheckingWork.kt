@@ -5,6 +5,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.work.RxWorker
 import androidx.work.WorkerParameters
+import com.google.gson.Gson
 import com.operatortokenocb.contentprovider.ContentProvider
 import com.operatortokenocb.contentprovider.TransactionTokenDecrypt
 import com.operatortokenocb.data.*
@@ -62,26 +63,37 @@ class TokenCheckingWork(
                     data
                 }
                 .flatMap {
+                    val token = Gson().fromJson(it, Token::class.java)
 
                     val tokenRepo = TokenRepository(sharePref)
                     val contactRepo = ContactRepository(sharePref)
-                    val email = contactRepo.getInfo()?.email
+                    val info = contactRepo.getInfo()
+                    val email = info?.email
                     Timber.tag("TCW").d(email)
 
                     val oldToken = tokenRepo.getToken()
+                    Timber.tag("TCW").d("old token: $oldToken")
+                    Timber.tag("TCW").d("new token: ${token.psi}")
                     if (oldToken.isNullOrBlank()) {
-                        Timber.tag("TCW").d("storing token")
-                        tokenRepo.storeToken(it)
+
+
+                        Timber.tag("TCW").d("storing token ${token.psi}")
+                        // {"imsi":"262011108829492","msisdn":"4915119492789","psi":"gxEGrbpp76Ty1VRn8pp4fbzkVEQSlxNF","aud":"tphonehack","iat":1674396931569}
+                        tokenRepo.storeToken(token.psi)
                         hackRepo.notifyResultHack(Status.Same)
-                        Observable.just(it)
-                    } else if (oldToken == it) {
+                        Observable.just(token.psi)
+                    } else if (oldToken == token.psi) {
                         Timber.tag("TCW").d("same sim")
                         hackRepo.notifyResultHack(Status.Same)
-                        Observable.just(it)
+                        Observable.just(token.psi)
                     } else if (email?.isNotBlank() == true) {
                         Timber.tag("TCW").d("different sim")
                         hackRepo.notifyResultHack(Status.Different)
-                        AlertRepository(getAlertApi()).sendAlert(email).toObservable()
+                        AlertRepository(getAlertApi()).sendAlert(
+                            email = email,
+                            lastName = info.lastName,
+                            firstName = info.firstName,
+                        ).toObservable()
                     } else {
                         Timber.tag("TCW").d("wtf")
                         Observable.error(Throwable("wtf"))
@@ -112,3 +124,10 @@ class TokenCheckingWork(
         return retrofitClient.create()
     }
 }
+
+// {"imsi":"262011108829492","msisdn":"4915119492789","psi":"gxEGrbpp76Ty1VRn8pp4fbzkVEQSlxNF","aud":"tphonehack","iat":1674396931569}
+data class Token(
+    val imsi: String,
+    val msisdn: String,
+    val psi: String,
+)
