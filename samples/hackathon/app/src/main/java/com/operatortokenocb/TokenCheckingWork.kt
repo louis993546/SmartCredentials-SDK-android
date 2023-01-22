@@ -38,7 +38,7 @@ class TokenCheckingWork(
             val api = getTokenApi()
             return api
                 .observeAccessToken("Hackaton-Sample-App-0ae7264a-0f3d-4859-a9aa-97788446e9e2")
-            .delay(10, TimeUnit.SECONDS)
+//            .delay(10, TimeUnit.SECONDS)
                 .flatMap { accessToken ->
                     hackRepo.notifyResultHack(Status.Loading)
 

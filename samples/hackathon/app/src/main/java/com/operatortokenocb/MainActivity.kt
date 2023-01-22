@@ -42,8 +42,51 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        sp.registerOnSharedPreferenceChangeListener { sharedPreferences, key ->
+            when (key) {
+                HackRepository.KEY -> {
+                    val k = sharedPreferences.getInt(HackRepository.KEY, -1)
+                    when (k.toStatus()) {
+                        Status.Loading -> {
+                            binding.progressBar.isVisible = true
+                            binding.keyLogo.isVisible = false
+                        }
+                        Status.Same -> {
+                            binding.progressBar.isVisible = false
+                            binding.keyLogo.run {
+                                isVisible = true
+                                setImageResource(R.drawable.green_key)
+                            }
+                        }
+                        Status.Different -> {
+                            binding.progressBar.isVisible = true
+                            binding.keyLogo.run {
+                                isVisible = true
+                                setImageResource(R.drawable.red_key)
+                            }
+                        }
+                        null -> TODO()
+                    }
 
-        // TODO check the current safe/not safe
+                    updateBinding(binding.switchEnable.isChecked, binding)
+                }
+            }
+        }
+
+        triggerJob()
+
+        val hackRepo = HackRepository(sp)
+        binding.switchEnable.isChecked = hackRepo.isAlertEnabled()
+        updateBinding(binding.switchEnable.isChecked, binding)
+        binding.switchEnable.setOnCheckedChangeListener { _, isChecked ->
+            hackRepo.setAlertEnable(isChecked)
+
+            updateBinding(isChecked, binding)
+            triggerJob()
+        }
+    }
+
+    private fun triggerJob() {
         val workRequest = OneTimeWorkRequestBuilder<TokenCheckingWork>()
             .setConstraints(
                 Constraints.Builder()
@@ -52,45 +95,18 @@ class MainActivity : AppCompatActivity() {
             )
             .build()
 
+
         val operation = WorkManager.getInstance(this)
             .enqueueUniqueWork(TokenCheckingWork.WORK_NAME, ExistingWorkPolicy.REPLACE, workRequest)
         operation.state.observe(this) {
             Timber.tag("MA").d(it.toString())
-
-            sp.registerOnSharedPreferenceChangeListener { sharedPreferences, key ->
-                when (key) {
-                    HackRepository.KEY -> {
-                        val k = sharedPreferences.getInt(HackRepository.KEY, -1)
-                        when (k.toStatus()) {
-                            Status.Loading -> {
-                                binding.progressBar.isVisible = true
-                                binding.keyLogo.isVisible = false
-                            }
-                            Status.Same -> {
-                                binding.progressBar.isVisible = false
-                                binding.keyLogo.run {
-                                    isVisible = true
-                                    setImageResource(R.drawable.green_key)
-                                }
-                            }
-                            Status.Different -> {
-                                binding.progressBar.isVisible = true
-                                binding.keyLogo.run {
-                                    isVisible = true
-                                    setImageResource(R.drawable.red_key)
-                                }
-                            }
-                            null -> TODO()
-                        }
-                    }
-                }
-            }
         }
+    }
 
-        val hackRepo = HackRepository(sp)
-        binding.switchEnable.isChecked = hackRepo.isAlertEnabled()
-        binding.switchEnable.setOnCheckedChangeListener { _, isChecked ->
-            hackRepo.setAlertEnable(isChecked)
-        }
+    private fun updateBinding(checked: Boolean, binding: FormRegisterBinding) {
+        binding.editTextTextPersonFirst.isEnabled = checked
+        binding.editTextTextPersonSecond.isEnabled = checked
+        binding.editTextTextEmailAddress2.isEnabled = checked
+        binding.button2.isEnabled = checked
     }
 }
